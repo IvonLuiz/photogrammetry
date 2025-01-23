@@ -1,0 +1,92 @@
+#include <iostream>
+#include <unordered_map>
+#include <functional>
+#include <opencv2/opencv.hpp>
+#include <opencv2/features2d.hpp>
+#ifdef HAVE_OPENCV_XFEATURES2D
+#include <opencv2/xfeatures2d.hpp>
+#endif
+
+#include "featureExtractor.h"
+
+FeatureExtractor::FeatureExtractor()
+{
+    // Replace Condition Dispatcher with Command (to substitute if else logic)
+    dispatcher["ORB"] = []() { return cv::ORB::create(); };
+    dispatcher["SIFT"] = []() { return cv::SIFT::create(); };
+    dispatcher["SURF"] = []() { return cv::xfeatures2d::SURF::create(); };
+    dispatcher["AKAZE"] = []() { return cv::AKAZE::create(); };
+    dispatcher["BRISK"] = []() { return cv::BRISK::create(); };
+    dispatcher["KAZE"] = []() { return cv::KAZE::create(); };
+}
+
+void FeatureExtractor::extract(const std::string& imgPath,
+                               std::vector<cv::KeyPoint>* keypoints,
+                               cv::Mat* descriptors,
+                               const std::string featureType,
+                               bool plot)
+{
+    // Checks if feature extractor is valid
+    checkFeatureExtractor(featureType);
+    cv::Mat img = getImg(imgPath);
+
+    auto detector = dispatcher[featureType]();
+
+    // Extract features and descriptors and stop keep track of timer
+    auto start = std::chrono::high_resolution_clock::now();
+
+    detector->detectAndCompute(img, cv::noArray(), *keypoints, *descriptors);
+    
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> duration = end - start;
+    auto duration_ms = std::chrono::duration_cast<std::chrono::milliseconds>(duration);
+    int scaledDuration = duration_ms.count();
+
+    // Results
+    std::cout << "Detected " << keypoints->size() << " keypoints and descriptors using " << featureType << ".\n";
+    std::cout << "Descriptors size: " << descriptors->rows << "x" << descriptors->cols << "\n";
+    std::cout << "Time taken for " << featureType << ": " << scaledDuration << " milliseconds." << std::endl;
+    
+    if (plot == true)
+        showImage(img, *keypoints, featureType);
+}
+
+void FeatureExtractor::showImage(const cv::Mat& img, const std::vector<cv::KeyPoint>& keypoints, const std::string& featureType)
+{
+    cv::Mat img_keypoints;
+    cv::drawKeypoints(img, keypoints, img_keypoints, cv::Scalar::all(-1), cv::DrawMatchesFlags::DEFAULT);
+    
+    cv::imshow("Keypoints - " + featureType, img_keypoints);
+    cv::waitKey(0);
+    cv::destroyAllWindows();
+}
+
+void FeatureExtractor::checkFeatureExtractor(const std::string& featureType)
+{
+    if (dispatcher.find(featureType) == dispatcher.end())
+        throw std::invalid_argument("Feature type not supported: " + featureType);
+}
+
+cv::Mat FeatureExtractor::getImg(const std::string& imgPath)
+{
+    cv::Mat img = cv::imread(imgPath, cv::IMREAD_GRAYSCALE);
+
+    if (img.empty())
+        throw std::runtime_error("Could not open or find the image at path: " + imgPath);
+    
+    return img;
+}
+
+// int main(int argc, char* argv[]) {
+//     std::string imgPath = "box.png";
+//     FeatureExtractor extractor;
+// 
+//     extractor.extract(imgPath, "SIFT");
+//     extractor.extract(imgPath, "SURF");
+//     extractor.extract(imgPath, "ORB");
+//     extractor.extract(imgPath, "KAZE");
+//     extractor.extract(imgPath, "AKAZE");
+//     extractor.extract(imgPath, "BRISK");
+//  
+//     return 0;
+// }
