@@ -16,10 +16,6 @@ std::vector<cv::DMatch> FeatureMatcher::matchFeatures(const std::vector<cv::KeyP
     std::vector<cv::DMatch> matches;
     matcher->match(descriptors1, descriptors2, matches);
     
-    // std::sort(matches.begin(), matches.end(), [](const cv::DMatch& a, const cv::DMatch& b) {
-    //         return a.distance < b.distance;
-    //     });
-    
     return matches;
 }
 
