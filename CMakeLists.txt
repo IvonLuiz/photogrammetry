@@ -1,16 +1,20 @@
-#cmake_minimum_required(VERSION 2.8)
-#project(photogrammetry)
-#find_package( OpenCV REQUIRED )
-#add_executable( lerImagem lerImagem.cpp )
-#target_link_libraries( lerImagem ${OpenCV_LIBS} )
-#
-
 cmake_minimum_required(VERSION 2.8)
-
 project(photogrammetry)
 
 find_package(OpenCV REQUIRED)
+include_directories(${OpenCV_INCLUDE_DIRS})
 
-add_executable(extractKeypoints extractKeypoints.cpp)
+# Library
+add_library(feature_extractor featureExtractor.cpp)
 
-target_link_libraries(extractKeypoints ${OpenCV_LIBS})
+# executables 
+# add_executable(extractKeypointsDemo featureExtractor.cpp)
+add_executable(anmsOrb adaptiveNonMaxSuppressionORB.cpp)
+add_executable(matchFeatures matchFeatures.cpp)
+
+
+# LInk library and dependencies
+#target_link_libraries(extractKeypointsDemo feature_extractor ${OpenCV_LIBS})
+target_link_libraries(anmsOrb ${OpenCV_LIBS})
+target_link_libraries(feature_extractor ${OpenCV_LIBS})
+target_link_libraries(matchFeatures feature_extractor ${OpenCV_LIBS})
