@@ -17,11 +17,15 @@ public:
         dispatcher["ORB"] = []() { return cv::ORB::create(); };
         dispatcher["SIFT"] = []() { return cv::SIFT::create(); };
         dispatcher["SURF"] = []() { return cv::xfeatures2d::SURF::create(); };
-        dispatcher["FAST"] = []() { return cv::FastFeatureDetector::create(); };
-        dispatcher["GFTT"] = []() { return cv::GFTTDetector::create(); };
+        dispatcher["AKAZE"] = []() { return cv::AKAZE::create(); };
+        dispatcher["BRISK"] = []() { return cv::BRISK::create(); };
+        dispatcher["KAZE"] = []() { return cv::KAZE::create(); };
     }
 
-    void extract(const std::string& imgPath, const std::string& featureType="ORB", bool plot=true)
+    void extract(const std::string& imgPath,
+                 std::vector<cv::KeyPoint>& keypoints, cv::Mat& descriptors,
+                 const std::string& featureType = "ORB",
+                 bool plot=false)
     {
         // Checks if feature extractor is valid
         checkFeatureExtractor(featureType);
@@ -29,11 +33,10 @@ public:
 
         auto detector = dispatcher[featureType]();
 
-        // Extract features and stop keep track of timer
+        // Extract features and descriptors and stop keep track of timer
         auto start = std::chrono::high_resolution_clock::now();
 
-        std::vector<cv::KeyPoint> keypoints;
-        detector->detect(img, keypoints);
+        detector->detectAndCompute(img, cv::noArray(), keypoints, descriptors);
         
         auto end = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> duration = end - start;
@@ -42,10 +45,18 @@ public:
 
         // Results
         std::cout << "Detected " << keypoints.size() << " keypoints and descriptors using " << featureType << ".\n";
+        std::cout << "Descriptors size: " << descriptors.rows << "x" << descriptors.cols << "\n";
         std::cout << "Time taken for " << featureType << ": " << scaledDuration << " milliseconds." << std::endl;
         
         if (plot == true)
             showImage(img, keypoints, featureType);
+    }
+
+    // Implementation to not require keypoints and descriptors as arguments
+    void extract(const std::string& imgPath, const std::string& featureType = "ORB", bool plot = false) {
+        std::vector<cv::KeyPoint> keypoints;
+        cv::Mat descriptors;
+        extract(imgPath, keypoints, descriptors, featureType, plot);
     }
 
     void showImage(const cv::Mat& img, const std::vector<cv::KeyPoint>& keypoints, const std::string& featureType)
@@ -80,11 +91,12 @@ int main(int argc, char* argv[]) {
     std::string imgPath = "image.png";
     FeatureExtractor extractor;
 
-    extractor.extract(imgPath, "FAST");
     extractor.extract(imgPath, "SIFT");
-    extractor.extract(imgPath, "ORB");
     extractor.extract(imgPath, "SURF");
-    extractor.extract(imgPath, "GFTT");
+    extractor.extract(imgPath, "ORB");
+    extractor.extract(imgPath, "KAZE");
+    extractor.extract(imgPath, "AKAZE");
+    extractor.extract(imgPath, "BRISK");
  
     return 0;
 }
