@@ -17,11 +17,11 @@ public:
                  std::vector<cv::KeyPoint>* keypoints = nullptr,
                  cv::Mat* descriptors = nullptr,
                  const std::string featureType = "ORB",
-                 bool plot = true);
+                 bool plot = false);
     void extract(const std::string& imgPath,
                  const std::string featureType = "ORB",
-                 bool plot = true);
-                 
+                 bool plot = false);
+
 private:
     // Replace Condition Dispatcher with Command using hashmap (to substitute if else logic)
     std::unordered_map<std::string, std::function<cv::Ptr<cv::Feature2D>()>> dispatcher;
