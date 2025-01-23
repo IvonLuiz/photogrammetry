@@ -51,7 +51,16 @@ void FeatureExtractor::extract(const std::string& imgPath,
         showImage(img, *keypoints, featureType);
 }
 
-void FeatureExtractor::showImage(const cv::Mat& img, const std::vector<cv::KeyPoint>& keypoints, const std::string& featureType)
+void FeatureExtractor::extract(const std::string &imgPath, const std::string featureType, bool plot)
+{
+    // Init to not be used
+    std::vector<cv::KeyPoint> keypoints;
+    cv::Mat descriptors;
+    this->extract(imgPath, &keypoints, &descriptors, featureType, plot);
+}
+
+void FeatureExtractor::showImage(const cv::Mat& img, const std::vector<cv::KeyPoint>& keypoints,
+                                 const std::string& featureType)
 {
     cv::Mat img_keypoints;
     cv::drawKeypoints(img, keypoints, img_keypoints, cv::Scalar::all(-1), cv::DrawMatchesFlags::DEFAULT);
@@ -77,7 +86,8 @@ cv::Mat FeatureExtractor::getImg(const std::string& imgPath)
     return img;
 }
 
-// int main(int argc, char* argv[]) {
+// int main(int argc, char* argv[])
+// {
 //     std::string imgPath = "box.png";
 //     FeatureExtractor extractor;
 // 
@@ -87,6 +97,6 @@ cv::Mat FeatureExtractor::getImg(const std::string& imgPath)
 //     extractor.extract(imgPath, "KAZE");
 //     extractor.extract(imgPath, "AKAZE");
 //     extractor.extract(imgPath, "BRISK");
-//  
+// 
 //     return 0;
 // }
