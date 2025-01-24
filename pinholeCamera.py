@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import cv2
 
+
 class PinholeCamera():
     def __init__(self, K : np.ndarray, dist_coefs : np.ndarray, world_R_cam : np.ndarray, world_T_cam : np.ndarray):
         """
@@ -62,7 +63,7 @@ class PinholeCamera():
         img_pts_2d = (img_coords_hom[:2, :] / img_coords_hom[2, :]).T  # (Nx2)
         
         # Apply lens distortion
-        k1, k2, p1, p2, k3 = self.dist_coefs  # Assuming distortion_coeffs is a list or array of 5 elements
+        k1, k2, p1, p2, k3 = self.dist_coefs
         x = img_pts_2d[:, 0]
         y = img_pts_2d[:, 1]
         r2 = x**2 + y**2
@@ -105,30 +106,6 @@ class PinholeCamera():
         cam_rays = (K_inv @ undistorted_pts_hom.T).T
 
         return cam_rays
-        
-    def apply_dist(self, img_pts_2d):
-        # Apply lens distortion
-        k1, k2, p1, p2, k3 = self.distortion_coeffs  # Assuming distortion_coeffs is a list or array of 5 elements
-        x = img_pts_2d[:, 0]
-        y = img_pts_2d[:, 1]
-        r2 = x**2 + y**2
-        r4 = r2**2
-        r6 = r2**3
-
-        # Radial distortion
-        radial_distortion = 1 + k1 * r2 + k2 * r4 + k3 * r6
-
-        # Tangential distortion
-        x_tangential = 2 * p1 * x * y + p2 * (r2 + 2 * x**2)
-        y_tangential = p1 * (r2 + 2 * y**2) + 2 * p2 * x * y
-
-        # Apply distortions
-        x_distorted = x * radial_distortion + x_tangential
-        y_distorted = y * radial_distortion + y_tangential
-
-        distorted_pts = np.vstack((x_distorted, y_distorted)).T
-        
-        return distorted_pts
 
         
 # TESTING
@@ -137,11 +114,16 @@ def test_pinhole_camera():
     K = np.array([[800, 0, 320],
                   [0, 800, 240],
                   [0, 0, 1]])
-    dist_coefs = np.array([0.1, -0.05, 0.001, 0.001, 0.0])  # Some distortion coefficients
+    
+    no_dist_coefs = np.array([0, 0, 0, 0, 0])
+    dist_coefs = np.array([0.00, -0.00, 0, 0.01, 0.0])  
+   
     world_R_cam = np.eye(3)
     world_T_cam = np.array([[0], [0], [-10]])  # Translate the camera to -10 on the Z axis
-    camera = PinholeCamera(K, dist_coefs, world_R_cam, world_T_cam)
-
+    
+    camera = PinholeCamera(K, no_dist_coefs, world_R_cam, world_T_cam)
+    camera_with_dist = PinholeCamera(K, dist_coefs, world_R_cam, world_T_cam)
+    
     # 3D Cube
     cube_vertices = np.array([
         [-1, -1, -1], [1, -1, -1], [1, 1, -1], [-1, 1, -1],
@@ -154,33 +136,53 @@ def test_pinhole_camera():
     ]
 
     projected_pts = camera.project(cube_vertices)
-
+    projected_pts_with_dist = camera_with_dist.project(cube_vertices)
+    
+    # Unproject
+    unprojected_rays = camera.unproject(projected_pts)
+    print("Unprojected Rays:")
+    print(unprojected_rays)
+    
     # Plot
-    fig = plt.figure(figsize=(10, 5))
-    ax3d = fig.add_subplot(121, projection='3d')
-    ax2d = fig.add_subplot(122)
-
+    fig = plt.figure(figsize=(14, 7))
+    ax3d = fig.add_subplot(131, projection='3d')
+    
     for edge in cube_edges:
         ax3d.plot(
             cube_vertices[edge, 0], cube_vertices[edge, 1], cube_vertices[edge, 2], color='blue'
         )
-    ax3d.set_title("3D Cube")
+    ax3d.set_title("Cube 3D")
     ax3d.set_xlabel("X")
     ax3d.set_ylabel("Y")
     ax3d.set_zlabel("Z")
 
+    # Plot da projeção 2D sem distorção
+    ax2d_no_dist = fig.add_subplot(132)
     for edge in cube_edges:
         start_idx, end_idx = edge
         start_point = projected_pts[start_idx]
         end_point = projected_pts[end_idx]
-        ax2d.plot([start_point[0], end_point[0]], [start_point[1], end_point[1]], color='red')
-    ax2d.set_title("2D Projection")
-    ax2d.set_xlabel("X")
-    ax2d.set_ylabel("Y")
-    ax2d.set_xlim(0, 640)
-    ax2d.set_ylim(480, 0)  # Inverter o eixo Y para coordenadas de imagem
+        ax2d_no_dist.plot([start_point[0], end_point[0]], [start_point[1], end_point[1]], color='red')
+    ax2d_no_dist.set_title("Projection 2D no Distorção")
+    ax2d_no_dist.set_xlabel("X")
+    ax2d_no_dist.set_ylabel("Y")
+    ax2d_no_dist.set_xlim(0, 640)
+    ax2d_no_dist.set_ylim(480, 0)  # Invertendo o eixo Y para coordenadas de imagem
+
+    # Plot da projeção 2D com distorção
+    ax2d_with_dist = fig.add_subplot(133)
+    for edge in cube_edges:
+        start_idx, end_idx = edge
+        start_point = projected_pts_with_dist[start_idx]
+        end_point = projected_pts_with_dist[end_idx]
+        ax2d_with_dist.plot([start_point[0], end_point[0]], [start_point[1], end_point[1]], color='green')
+    ax2d_with_dist.set_title("Projection 2D with Distorção")
+    ax2d_with_dist.set_xlabel("X")
+    ax2d_with_dist.set_ylabel("Y")
+    ax2d_with_dist.set_xlim(-5000, 6400)
+    ax2d_with_dist.set_ylim(4800, -4000)  # Invertendo o eixo Y para coordenadas de imagem
 
     plt.tight_layout()
-    plt.savefig("test pinhole camera")
+    plt.savefig("test_pinhole_camera_with_distortion.png")
 
 test_pinhole_camera()
