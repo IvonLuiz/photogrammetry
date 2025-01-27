@@ -34,7 +34,7 @@ class Triangulation:
         extrinsic = np.hstack((R, t.reshape(-1, 1)))
         
         # Compute the projection matrix P = K * [R | t]
-        P = np.dot(K, extrinsic)
+        P = K @ extrinsic
         
         return P
     
@@ -59,19 +59,22 @@ class Triangulation:
             y2 = points2_h[i, 1]
 
             A = np.vstack((
-                points1_h[i, 0] * self.P1[2, :] - self.P1[0, :],
-                points1_h[i, 1] * self.P1[2, :] - self.P1[1, :],
-                points2_h[i, 0] * self.P2[2, :] - self.P2[0, :],
-                points2_h[i, 1] * self.P2[2, :] - self.P2[1, :]
+                x1 * self.P1[2] - self.P1[0],
+                y1 * self.P1[2] - self.P1[1],
+                x2 * self.P2[2] - self.P2[0],
+                y2 * self.P2[2] - self.P2[1]
             ))
         
-            # Solving using SVD
+            # The system AX = 0 is solved using Singular Value Decomposition (SVD).
+            # The solution is the singular vector corresponding to the smallest singular value,
+            # which represents the estimate of the 3D point homogeneous coordenates.
             _, _, Vt = np.linalg.svd(A)
-            X = Vt[-1, :4]  # Solution is the last row of Vt
+            X = Vt[-1]  # Solution is the last row of Vt
             
             points_3d[i, :] = X[:3] / X[3]
         
         return points_3d
+
 
 if __name__ == "__main__":
     # Define camera parameters (intrinsic and extrinsic)
@@ -87,14 +90,11 @@ if __name__ == "__main__":
         'translation': np.array([1, 0, 0])  # t vector (baseline of 1 unit)
     }
     
-    # Define 2D points in both images (Nx2 arrays)
-    points1 = np.array([[320, 240], [350, 260]])  # Example points in image 1
-    points2 = np.array([[320, 240], [340, 260]])  # Corresponding points in image 2
+    # Testing with 2D points in both images (Nx2 arrays)
+    points1 = np.array([[320, 240], [330, 250], [340, 260]])
+    points2 = np.array([[310, 240], [310, 270], [330, 120]])
     
-    # Create Triangulation object
     triangulator = Triangulation(camera_params1, camera_params2)
-    
-    # Triangulate 3D points
     points_3d = triangulator.triangulate_points(points1, points2)
     
-    print("3D Points:\n", points_3d)
+    print("3D Points:\n", np.round(points_3d, 2))
