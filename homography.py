@@ -41,19 +41,32 @@ class CameraPoseEstimatorHomography:
         
         # Decompose the hoography to get the rotation and translation
         num_solutions, rotations, translations, normals = cv2.decomposeHomographyMat(H, self.camera_matrix)
-        
-        print(num_solutions)
-        print(rotations)
-        print(translations)
-        print(normals)
-        
+
         # Select the correct solution (usually the first one)
         rvec, _ = cv2.Rodrigues(rotations[0])
         tvec = translations[0]
         
         return True, rvec, tvec
 
+    def project_points(self, points_3d, rvec, tvec):
+        """
+        Project 3D points to the 2D image plane using the estimated camera pose.
 
+        Args:
+            points_3d (np.ndarray): Array of 3D points in the world coordinate system (Nx3).
+            rvec (np.ndarray): Rotation vector (3x1).
+            tvec (np.ndarray): Translation vector (3x1).
+
+        Returns:
+            points_2d (np.ndarray): Projected 2D points in the image plane (Nx2).
+        """
+        points_2d, _ = cv2.projectPoints(
+            points_3d, rvec, tvec, self.camera_matrix, self.dist_coeffs
+        )
+        return points_2d.reshape(-1, 2)
+
+    
+    
 if __name__ == "__main__":
     # Define the camera intrinsic matrix
     camera_matrix = np.array([
@@ -62,26 +75,30 @@ if __name__ == "__main__":
         [0, 0, 1]
     ], dtype=np.float32)
     dist_coeffs = np.zeros((5, 1), dtype=np.float32)
-    # Physical size of the marker (e.g., 0.2 meters x 0.2 meters)
-    marker_size = (0.2, 0.2)
+    # Physical size of the marker (e.g., 0.1 meters x 0.1 meters)
+    marker_size = (0.1, 0.1)
 
     pose_estimator = CameraPoseEstimatorHomography(marker_size, camera_matrix, dist_coeffs)
 
     # Example marker corners in the image
     marker_corners = np.array([
-        [500, 300],  # Top-left
-        [700, 300],  # Top-right
-        [700, 500],  # Bottom-right
-        [500, 500]   # Bottom-left
-    ])
+        [100, 150],  # Bottom-left corner
+        [300, 150],  # Bottom-right corner
+        [300, 350],  # Top-right corner
+        [100, 350]  # Top-left corner
+    ], dtype=np.float32)
 
 
     success, rvec, tvec = pose_estimator.estimate_pose(marker_corners)
 
-    print("Rotation Vector (rvec):", rvec)
-    print("Translation Vector (tvec):", tvec)
+    if success:
+        print("Rotation Vector (rvec):\n", rvec)
+        print("Translation Vector (tvec):\n", tvec)
 
-    # Example: project a 3D point in the marker's coordinate system onto the image
-    obj_points = np.array([[0.1, 0.1, 0]], dtype=np.float32)  # A point on the marker
-    img_points = pose_estimator.project_points(obj_points, rvec, tvec)
-    print("Projected Point in Image:", img_points)
+        # Example: project a 3D point in the marker's coordinate system onto the image
+        obj_points = np.array([[0.1, 0.1, 0]], dtype=np.float32)  # A point on the marker
+        img_points = pose_estimator.project_points(obj_points, rvec, tvec)
+        print("Projected Point in Image:", img_points)
+    
+    else:
+        print("Pose estimation failed.")
