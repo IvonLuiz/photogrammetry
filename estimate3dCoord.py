@@ -80,14 +80,14 @@ if __name__ == "__main__":
     # Define camera parameters (intrinsic and extrinsic)
     camera_params1 = {
         'intrinsic': np.array([[1000, 0, 320], [0, 1000, 240], [0, 0, 1]]),  # K matrix
-        'rotation': np.eye(3),  # R matrix (identity for simplicity)
-        'translation': np.array([0, 0, 0])  # t vector
+        'rotation': np.eye(3),
+        'translation': np.array([0, 0, 0])
     }
     
     camera_params2 = {
         'intrinsic': np.array([[1000, 0, 320], [0, 1000, 240], [0, 0, 1]]),  # K matrix
-        'rotation': np.eye(3),  # R matrix (identity for simplicity)
-        'translation': np.array([1, 0, 0])  # t vector (baseline of 1 unit)
+        'rotation': np.eye(3),
+        'translation': np.array([1, 0, 1])
     }
     
     # Testing with 2D points in both images (Nx2 arrays)
